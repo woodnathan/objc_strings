@@ -57,15 +57,28 @@ def key_in_string(s):
     
     return key
 
-def key_in_code_line(s):    
-    m = re.search("NSLocalizedString\(@\"(.*?)\",", s)        
+def map_result_groups(r):
+    key = r.group(2)
+    table = None
+    
+    if (len(r.group(1)) != 0): # Check if the table 
+        table = r.group(3)     # Pull out the table
+
+    return (key, table)
+
+def key_in_code_line(s):
+    m = re.search('^\s?(?!\/\/)\s*NSLocalizedString(.*)\(@\"(.*?)\",\s*@\"(.*?)\".*\)', s, re.MULTILINE)
 
     if not m:
-        return None    
-    
-    key = m.group(1)
+        return None
 
-    return key
+    key = m.group(2)
+    table = None
+    
+    if (len(m.group(1)) != 0): # Check if the table 
+        table = m.group(3)     # Pull out the table
+
+    return (key, table)
 
 def guess_encoding(path):
     enc = 'utf-8'
@@ -131,10 +144,13 @@ def localized_strings_at_path(p):
         if s.strip().startswith('//'):
             continue
         
-        key = key_in_code_line(s)
+        result = key_in_code_line(s)
 
-        if not key:
+        if not result:
             continue
+        
+        key = result[0]
+        # table = result[1]
         
         keys.add(key)
 
@@ -169,7 +185,7 @@ def show_untranslated_keys_in_project(project_path):
     
     keys_set_in_code = keys_set_in_code_at_path(project_path)
 
-    strings_paths = paths_with_files_passing_test_at_path(lambda f:f == "Localizable.strings", project_path)
+    strings_paths = paths_with_files_passing_test_at_path(lambda f:f.endswith('.strings'), project_path)
     
     for p in strings_paths:
         keys_set_in_strings = keys_set_in_strings_file_at_path(p)
